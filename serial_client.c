@@ -157,7 +157,7 @@ int main(int argc, char **argv)
         digitalWrite(WRITE_SIG, 1);
 #endif
         int nr = write(fd, &obuf, 1);
-        tcoflush(fd, TCOFLUSH) ; // flush the output buffer
+        tcflush(fd, TCOFLUSH) ; // flush the output buffer
 #ifdef RPI
         digitalWrite(WRITE_SIG, 0);
 #endif

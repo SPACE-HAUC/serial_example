@@ -119,50 +119,55 @@ int main(int argc, char **argv)
     }
     set_blocking(fd, 0);
 
-    unsigned char inbuf[34], obuf, tmp;
+    unsigned char inbuf[36], obuf, tmp, val = 0 ;
     while (1)
     {
 #ifdef RPI
         digitalWrite(READ_SIG, 1);
 #endif
         // read 10 0xa0 bytes to make sure you got the full frame
-        int preamble_count = -10, frame_valid = 1, wait_count = 0;
+        int preamble_count = -10, frame_valid = 1;
         do
         {
-            read(fd, &tmp, 1);
-            wait_count++;
-            printf("In waiting: read 0x%x, wait count: %d\n", tmp, wait_count);
-            if (tmp == 0xa0)
+            int rd = read(fd, &tmp, 1);
+            usleep(charsleep);
+//	printf("In waiting: read 0x%x\n", tmp);
+            if (tmp == 0xa0 && rd == 1)
                 preamble_count++;
             else
                 preamble_count = -10;
-        } while ((preamble_count < 0) && (wait_count < 10));
+        } while ((preamble_count < 0));
         // read data
-        int n = read(fd, inbuf, 34); // read actual data
+	usleep(charsleep*36);
+        int n = read(fd, inbuf, 36); // read actual data
+	printf("Read: %d\n", n) ;
         // read end frame
-        for (int i = 0; i < 2; i++)
+        for (int i = 34; i < 36; i++)
         {
-            read(fd, &tmp, 1);
-            if (tmp != 0xb0)
+	    //printf("0x%x ", inbuf[i]);
+            if (inbuf[i] != 0xb0)
                 frame_valid &= 0;
         }
+	//printf("\n");
 #ifdef RPI
         digitalWrite(READ_SIG, 0);
 #endif
-        obuf = 0xff & rand();
+        obuf = val++;//0xff & rand();
 #ifdef RPI
         digitalWrite(WRITE_SIG, 1);
 #endif
-        n = write(fd, &obuf, 1);
+        int nr = write(fd, &obuf, 1);
 #ifdef RPI
         digitalWrite(WRITE_SIG, 0);
 #endif
         usleep(charsleep);
-        printf("Frame valid: %d\n", frame_valid);
+        if ( n < 36 )
+		continue ;
+	printf("Frame valid: %d\n", frame_valid);
         printf("Received: ");
         for (int i = 0; i < 34; i++)
-            printf("%d ", inbuf[i]);
-        printf("\nSent: %d\n", obuf);
+            printf("0x%x ", inbuf[i]);
+        printf("\nSent: %d\n\n", obuf);
     }
     return 0;
 }
